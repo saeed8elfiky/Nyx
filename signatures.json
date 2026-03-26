@@ -1,0 +1,44 @@
+{
+    "hashes": {
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": {
+            "name": "Empty_File_Test",
+            "type": "malware"
+        },
+        "68b329da9893e34099c7d8ad5cb9c940": {
+            "name": "EICAR-Test-File",
+            "type": "test_virus"
+        },
+        "44d88612fea8a8f36de82e1278abb02f": {
+            "name": "EICAR-Standard-Antivirus-Test-File",
+            "type": "test_virus"
+        },
+        "bc7a5c2918a699632b7202ff9220ad9b": {
+            "name": "Generic-Trojan",
+            "type": "trojan"
+        },
+        "0D9B99B0B51CA18E9449DAD5D6A71AAAA9507912ADCB1DC300AAF06ED424FC24": {
+            "name": "trytodefend",
+            "type": "trojan"
+        }
+    },
+    "heuristics": [
+        {
+            "name": "Suspicious_PHP_Eval",
+            "pattern": "eval\\s*\\(\\s*base64_decode\\s*\\(",
+            "type": "webshell",
+            "severity": "high"
+        },
+        {
+            "name": "Suspicious_Powershell_Encoded",
+            "pattern": "powershell(?:\\.exe)?\\s+-(?:enc|encodedcommand|e)\\s+[A-Za-z0-9+/=]+",
+            "type": "dropper",
+            "severity": "high"
+        },
+        {
+            "name": "Suspicious_VBS_Run",
+            "pattern": "CreateObject\\s*\\(\\s*[\"']WScript\\.Shell[\"']\\s*\\)\\.Run",
+            "type": "dropper",
+            "severity": "medium"
+        }
+    ]
+}
