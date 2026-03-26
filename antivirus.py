@@ -5,7 +5,11 @@ import re
 import argparse
 import shutil
 import time
+import requests
+import pefile
 from datetime import datetime
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 # ==========================================
 # METADATA & RIGHTS
@@ -16,8 +20,11 @@ from datetime import datetime
 # ==========================================
 
 # ==========================================
-# TERMINAL THEME / COLORS
+# CONFIGURATION
 # ==========================================
+VT_API_KEY = ""  # Add your VirusTotal API key here to enable cloud scanning
+LOG_FILE = "nyx_scan_history.log"
+
 class Colors:
     CYAN = '\033[96m'
     BLUE = '\033[94m'
@@ -34,7 +41,7 @@ BANNER = f"""
  |  \\| |\\ V /  \\  / 
  |_|\\__| |_|   /_/\\_\\
                        
-        [ NYX THREAT SCANNER - V1.0 ]
+        [ NYX THREAT SCANNER - V1.1 ]
         [ Created by: Saeed Elfiky  ]
 {Colors.END}
 """
@@ -58,211 +65,199 @@ class NyxEngine:
         self._setup_quarantine()
 
     def _load_signatures(self):
-        """Loads hash and heuristic signatures from the database file."""
         if not os.path.exists(self.db_path):
             print(f"{Colors.RED}[!] Signature database '{self.db_path}' not found!{Colors.END}")
-            # Create an empty one if not exists
             self.signatures = {"hashes": {}, "heuristics": []}
             return
 
         try:
             with open(self.db_path, "r", encoding="utf-8") as f:
                 raw_data = json.load(f)
-            
-            # Normalize database hashes to lowercase for consistent matching
             self.signatures["hashes"] = {k.lower(): v for k, v in raw_data.get("hashes", {}).items()}
             self.signatures["heuristics"] = raw_data.get("heuristics", [])
-            
-            # Pre-compile regex for faster heuristic scanning
             for rule in self.signatures.get("heuristics", []):
                 rule["regex"] = re.compile(rule["pattern"], re.IGNORECASE)
-                
-            hash_count = len(self.signatures.get("hashes", {}))
-            rule_count = len(self.signatures.get("heuristics", []))
-            print(f"{Colors.GREEN}[+] Loaded {hash_count} hash signatures and {rule_count} heuristic rules.{Colors.END}")
-            
+            print(f"{Colors.GREEN}[+] Loaded {len(self.signatures['hashes'])} hashes & {len(self.signatures['heuristics'])} rules.{Colors.END}")
         except Exception as e:
             print(f"{Colors.RED}[!] Error loading signatures: {str(e)}{Colors.END}")
 
     def _setup_quarantine(self):
-        """Ensures the quarantine directory exists."""
         if not os.path.exists(self.quarantine_dir):
             os.makedirs(self.quarantine_dir)
 
-    def calculate_hashes(self, file_path):
-        """Calculates MD5, SHA1, and SHA256 of a file."""
-        md5_hash = hashlib.md5()
-        sha1_hash = hashlib.sha1()
-        sha256_hash = hashlib.sha256()
+    def log_event(self, message):
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(f"[{timestamp}] {message}\n")
 
+    def calculate_hashes(self, file_path):
+        md5_h, sha1_h, sha256_h = hashlib.md5(), hashlib.sha1(), hashlib.sha256()
         try:
             with open(file_path, "rb") as f:
-                # Read in chunks to handle large files
                 for chunk in iter(lambda: f.read(4096), b""):
-                    md5_hash.update(chunk)
-                    sha1_hash.update(chunk)
-                    sha256_hash.update(chunk)
-                    
-            return {
-                "md5": md5_hash.hexdigest(),
-                "sha1": sha1_hash.hexdigest(),
-                "sha256": sha256_hash.hexdigest()
-            }
-        except Exception as e:
-             return None
+                    md5_h.update(chunk)
+                    sha1_h.update(chunk)
+                    sha256_h.update(chunk)
+            return {"md5": md5_h.hexdigest(), "sha1": sha1_h.hexdigest(), "sha256": sha256_h.hexdigest()}
+        except: return None
 
-    def heuristic_scan(self, file_path):
-        """Scans the file content for suspicious heuristic patterns."""
-        # Only scan smallish files to avoid huge memory usage (e.g., < 10MB)
+    def pe_deep_inspect(self, file_path):
+        """Advanced PE Analysis for suspicious imports/entropy."""
         try:
-            if os.path.getsize(file_path) > 10 * 1024 * 1024:
-                return None
-                
-            # Quick text-based scan (many scripts/droppers are text)
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-                
-            for rule in self.signatures.get("heuristics", []):
-                if rule["regex"].search(content):
-                    return {
-                        "name": rule["name"],
-                        "type": rule["type"],
-                        "severity": rule["severity"],
-                        "method": "Heuristic"
-                    }
-        except Exception as e:
-            pass
+            pe = pefile.PE(file_path)
+            # High Entropy check (packed/encrypted)
+            entropy = sum(s.get_entropy() for s in pe.sections) / len(pe.sections)
+            if entropy > 7.0:
+                return {"name": "Possible_Packed_Malware", "type": "packer", "method": f"Deep PE (Entropy: {entropy:.2f})"}
             
+            # Suspicious Import Check
+            suspicious_dlls = ["ws2_32.dll", "wininet.dll", "advapi32.dll"]
+            found_dlls = []
+            if hasattr(pe, 'DIRECTORY_ENTRY_IMPORT'):
+                for entry in pe.DIRECTORY_ENTRY_IMPORT:
+                    dll_name = entry.dll.decode().lower()
+                    if dll_name in suspicious_dlls:
+                        found_dlls.append(dll_name)
+            
+            if len(found_dlls) >= 2:
+                return {"name": "Suspicious_Imports", "type": "dropper", "method": f"PE Import Analysis ({', '.join(found_dlls)})"}
+        except: pass
         return None
 
-    def scan_file(self, file_path):
-        """Scans a single file using hashing and heuristics."""
-        self.stats["scanned"] += 1
-        threat_found = False
-        threat_info = None
+    def virustotal_lookup(self, sha256):
+        """Cloud intelligence check via VirusTotal."""
+        if not VT_API_KEY: return None
+        url = f"https://www.virustotal.com/api/v3/files/{sha256}"
+        headers = {"x-apikey": VT_API_KEY}
+        try:
+            response = requests.get(url, headers=headers, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                stats = data['data']['attributes']['last_analysis_stats']
+                if stats['malicious'] > 0:
+                    return {"name": f"VT_Flagged_{stats['malicious']}_Engines", "type": "cloud_intel", "method": "VirusTotal API"}
+        except: pass
+        return None
 
-        # 1. Hashing Check
+    def scan_file(self, file_path, silent=False):
+        self.stats["scanned"] += 1
+        threat_found, threat_info = False, None
         hashes = self.calculate_hashes(file_path)
-        if not hashes:
+        if not hashes: 
             self.stats["errors"] += 1
             return False, None
 
+        # 1. Local Hash Check
         db_hashes = self.signatures.get("hashes", {})
-        
-        # Check if any calculated hash exists in our DB
         for algo, hval in hashes.items():
             if hval in db_hashes:
-                threat_found = True
-                threat_info = db_hashes[hval]
-                threat_info["method"] = f"Hash Match ({algo.upper()})"
+                threat_found, threat_info = True, db_hashes[hval]
+                threat_info["method"] = f"Local Hash ({algo.upper()})"
                 break
 
-        # 2. Heuristic Check (if hash is clean)
+        # 2. VirusTotal Cloud Check
         if not threat_found:
-            heuristic_result = self.heuristic_scan(file_path)
-            if heuristic_result:
-                threat_found = True
-                threat_info = heuristic_result
+            vt_result = self.virustotal_lookup(hashes["sha256"])
+            if vt_result: threat_found, threat_info = True, vt_result
 
+        # 3. Deep PE Analysis (for .exe/.dll)
+        if not threat_found and file_path.lower().endswith(('.exe', '.dll')):
+            pe_result = self.pe_deep_inspect(file_path)
+            if pe_result: threat_found, threat_info = True, pe_result
+
+        # 4. Local Heuristic Content Scan
+        if not threat_found:
+            try:
+                if os.path.getsize(file_path) < 10*1024*1024:
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        content = f.read()
+                    for rule in self.signatures.get("heuristics", []):
+                        if rule["regex"].search(content):
+                            threat_found, threat_info = True, {"name": rule["name"], "type": rule["type"], "method": "Heuristic Rule"}
+                            break
+            except: pass
+
+        if threat_found and not silent:
+            msg = f"THREAT: {file_path} | {threat_info['name']} ({threat_info['method']})"
+            print(f"\n{Colors.RED}{Colors.BOLD}[!] {msg}{Colors.END}")
+            self.log_event(msg)
         return threat_found, threat_info
 
     def quarantine_file(self, file_path):
-        """Moves an infected file to the quarantine directory."""
         try:
             filename = os.path.basename(file_path)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            quarantine_path = os.path.join(self.quarantine_dir, f"{timestamp}_{filename}.quarantined")
-            
-            shutil.move(file_path, quarantine_path)
+            q_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}.quarantined"
+            q_path = os.path.join(self.quarantine_dir, q_name)
+            shutil.move(file_path, q_path)
             self.stats["quarantined"] += 1
-            return quarantine_path
+            self.log_event(f"QUARANTINED: {file_path} moved to {q_path}")
+            return q_path
         except Exception as e:
-            print(f"{Colors.RED}[!] Failed to quarantine {file_path}: {str(e)}{Colors.END}")
+            print(f"{Colors.RED}[!] Quarantine failed: {str(e)}{Colors.END}")
             return None
 
     def scan_directory(self, target_dir, auto_quarantine=False):
-        """Recursively scans a directory."""
-        print(f"\n{Colors.BLUE}[*] Starting scan on directory: {target_dir}{Colors.END}")
-        start_time = time.time()
-
-        for root, dirs, files in os.walk(target_dir):
-            # Skip the quarantine directory itself
-            if os.path.abspath(root).startswith(os.path.abspath(self.quarantine_dir)):
-                continue
-
+        print(f"\n{Colors.BLUE}[*] Scanning: {target_dir}{Colors.END}")
+        start = time.time()
+        for root, _, files in os.walk(target_dir):
+            if os.path.abspath(root).startswith(os.path.abspath(self.quarantine_dir)): continue
             for file in files:
                 file_path = os.path.join(root, file)
-                
-                # Simple progress indicator mapping
                 print(f"[>] Scanning: {file_path[:60]:<60}...", end='\r')
-                
                 infected, info = self.scan_file(file_path)
-                
-                if infected:
-                    self.stats["infected"] += 1
-                    print(f"\n{Colors.RED}{Colors.BOLD}[!] THREAT DETECTED: {file_path}{Colors.END}")
-                    print(f"    └── Name: {info.get('name', 'Unknown')}")
-                    print(f"    └── Type: {info.get('type', 'Unknown')}")
-                    print(f"    └── Method: {info.get('method', 'Unknown')}")
-                    
-                    if auto_quarantine:
-                        q_path = self.quarantine_file(file_path)
-                        if q_path:
-                            print(f"{Colors.YELLOW}    └── Action: Quarantined to {q_path}{Colors.END}")
-                    else:
-                        print(f"{Colors.YELLOW}    └── Action: Requires Manual Review{Colors.END}")
-
-        # Clear the scanning line
+                if infected and auto_quarantine: self.quarantine_file(file_path)
         print(" " * 80, end='\r')
-        
-        elapsed_time = time.time() - start_time
-        self.print_report(elapsed_time)
+        self.print_report(time.time() - start)
 
-    def print_report(self, elapsed_time):
-        """Prints a summary report of the scan."""
-        print(f"\n{Colors.BLUE}{Colors.BOLD}--- SCANNED FINISHED ---{Colors.END}")
-        print(f"Time Elapsed: {Colors.BOLD}{elapsed_time:.2f} seconds{Colors.END}")
-        print(f"Files Scanned: {Colors.BOLD}{self.stats['scanned']}{Colors.END}")
-        
-        if self.stats["infected"] > 0:
-            print(f"Threats Found: {Colors.RED}{Colors.BOLD}{self.stats['infected']}{Colors.END}")
-            print(f"Quarantined: {Colors.YELLOW}{Colors.BOLD}{self.stats['quarantined']}{Colors.END}")
-        else:
-            print(f"Threats Found: {Colors.GREEN}{Colors.BOLD}0 (System is Clean){Colors.END}")
-            
-        if self.stats["errors"] > 0:
-            print(f"Errors (File locked/unreadable): {Colors.YELLOW}{self.stats['errors']}{Colors.END}")
-        print("-" * 25)
+    def print_report(self, elapsed):
+        print(f"\n{Colors.BLUE}{Colors.BOLD}--- NYX SCAN REPORT ---{Colors.END}")
+        print(f"Time: {elapsed:.2f}s | Scanned: {self.stats['scanned']} | Infected: {Colors.RED}{self.stats['infected']}{Colors.END}")
+        print(f"Quarantined: {self.stats['quarantined']} | Errors: {self.stats['errors']}")
+        print("-" * 30)
+
+# ==========================================
+# REAL-TIME PROTECTION HANDLER
+# ==========================================
+class NyxGuardian(FileSystemEventHandler):
+    def __init__(self, scanner, auto_quarantine):
+        self.scanner = scanner
+        self.auto_quarantine = auto_quarantine
+
+    def on_created(self, event):
+        if not event.is_directory:
+            print(f"\n{Colors.YELLOW}[*] Nyx Guardian detected new file: {event.src_path}{Colors.END}")
+            infected, info = self.scanner.scan_file(event.src_path)
+            if infected and self.auto_quarantine:
+                self.scanner.quarantine_file(event.src_path)
+                print(f"{Colors.GREEN}[+] Threat isolated successfully.{Colors.END}")
 
 # ==========================================
 # MAIN EXECUTION
 # ==========================================
 if __name__ == "__main__":
     print(BANNER)
-    
-    parser = argparse.ArgumentParser(description="Nyx Anti-Virus Scanner")
-    parser.add_argument("target", nargs='?', default=".", help="Directory or file to scan (default is current directory)")
-    parser.add_argument("-q", "--quarantine", action="store_true", help="Automatically quarantine infected files")
-    parser.add_argument("-d", "--database", default="signatures.json", help="Path to signature database")
-    
+    parser = argparse.ArgumentParser(description="Nyx Threat Scanner (Advanced Version)")
+    parser.add_argument("target", nargs='?', default=".", help="Target directory/file")
+    parser.add_argument("-q", "--quarantine", action="store_true", help="Auto-quarantine")
+    parser.add_argument("-w", "--watch", action="store_true", help="Enable Real-Time Protection (Guardian Mode)")
     args = parser.parse_args()
 
-    scanner = NyxEngine(db_path=args.database)
+    scanner = NyxEngine()
     
-    target_path = os.path.abspath(args.target)
-    
-    if os.path.isdir(target_path):
-        scanner.scan_directory(target_path, auto_quarantine=args.quarantine)
-    elif os.path.isfile(target_path):
-        infected, info = scanner.scan_file(target_path)
-        if infected:
-            print(f"\n{Colors.RED}{Colors.BOLD}[!] THREAT DETECTED in single file: {target_path}{Colors.END}")
-            print(f"    └── Name: {info.get('name', 'Unknown')}")
-            print(f"    └── Type: {info.get('type', 'Unknown')}")
-            if args.quarantine:
-                scanner.quarantine_file(target_path)
-                print(f"{Colors.YELLOW}    └── Action: Quarantined{Colors.END}")
-        else:
-            print(f"\n{Colors.GREEN}[+] File is clean: {target_path}{Colors.END}")
+    if args.watch:
+        print(f"{Colors.GREEN}{Colors.BOLD}[🛡️] Nyx Guardian (Active Protection) Started! Monitoring: {args.target}{Colors.END}")
+        event_handler = NyxGuardian(scanner, args.quarantine)
+        observer = Observer()
+        observer.schedule(event_handler, args.target, recursive=True)
+        observer.start()
+        try:
+            while True: time.sleep(1)
+        except KeyboardInterrupt:
+            observer.stop()
+        observer.join()
     else:
-        print(f"{Colors.RED}[!] Target path not found: {target_path}{Colors.END}")
+        target = os.path.abspath(args.target)
+        if os.path.isdir(target): scanner.scan_directory(target, args.quarantine)
+        elif os.path.isfile(target): 
+            inf, _ = scanner.scan_file(target)
+            if inf and args.quarantine: scanner.quarantine_file(target)

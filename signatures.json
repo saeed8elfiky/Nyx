@@ -1,17 +1,5 @@
 {
     "hashes": {
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": {
-            "name": "Empty_File_Test",
-            "type": "malware"
-        },
-        "68b329da9893e34099c7d8ad5cb9c940": {
-            "name": "EICAR-Test-File",
-            "type": "test_virus"
-        },
-        "44d88612fea8a8f36de82e1278abb02f": {
-            "name": "EICAR-Standard-Antivirus-Test-File",
-            "type": "test_virus"
-        },
         "bc7a5c2918a699632b7202ff9220ad9b": {
             "name": "Generic-Trojan",
             "type": "trojan"

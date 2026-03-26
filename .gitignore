@@ -1,6 +1,9 @@
+# Nyx Ignored Files
 quarantine/
 *.quarantined
+nyx_scan_history.log
 __pycache__/
 .vscode/
 .idea/
 *.log
+.env

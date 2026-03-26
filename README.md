@@ -1,73 +1,67 @@
-# 🌑 Nyx Threat Scanner
+# 🌑 Nyx Threat Scanner v1.1
 **Created by: Saeed Elfiky**
 
-Nyx is a lightweight, command-line Anti-Virus and Threat Scanner built entirely from scratch in Python. It is designed to quickly identify malicious files, web shells, and scripts via both precise hash-matching and dynamic heuristic analysis.
+Nyx is a high-performance, advanced Anti-Virus and Threat Intelligence Scanner built from scratch in Python. It provides multilayered security by combining static signature matching, dynamic heuristic analysis, and deep-level PE file inspection.
 
-![Nyx Scanner Demo](https://img.shields.io/badge/Status-Active-blue.svg)
+![Nyx Scanner Demo](https://img.shields.io/badge/Security-Advanced-blue.svg)
 ![Python Version](https://img.shields.io/badge/Python-3.x-blue.svg)
+![Status](https://img.shields.io/badge/Active-v1.1-brightgreen.svg)
 
 ---
 
-## ⚡ Features
+## ⚡ Advanced Features
 
-*   **Hash-Based Signatures (MD5, SHA1, SHA256):** Instantly identifies known malware payloads based on precise cryptographic hashes.
-*   **Heuristic Analysis Engine:** Scans the content of unknown files for suspicious and common malicious patterns (e.g., encoded PowerShell execution, obfuscated PHP `eval()` expressions, malicious VBS runners) using regular expressions.
-*   **Automated Quarantine:** Automatically safely isolates infected files into a segregated quarantine folder to prevent accidental execution.
-*   **Recursive Directory Scanning:** Rapidly traverses deep folder structures and selectively ignores giant files to maintain optimum scanning speed.
-*   **Rich Terminal Interface:** A slick, fast, color-coded CLI dashboard to easily monitor scanning progress and threat reports.
+*   **🛡️ Nyx Guardian (Real-Time Protection):** Actively monitors your directories (Desktop, Downloads, etc.) in real-time using built-in file system watchers. It catches and quarantines threats as soon as they land on your drive.
+*   **🔍 Deep PE Inspection:** Analyzes Windows `.exe` and `.dll` structure for entropy (detecting packed/compressed malware) and suspicious DLL import hashing.
+*   **🌐 VirusTotal Cloud Integration:** Automatically syncs with the VirusTotal API to verify unknown samples against over 70+ global antivirus engines in the cloud.
+*   **📋 Persistent Event Logging:** Tracks all scan history, threat findings, and quarantine actions in a secure, local `nyx_scan_history.log` file.
+*   **📦 Automated Quarantine:** Safely isolates and segregates malicious files by timestamping and renaming them to prevent accidental execution.
 
 ---
 
 ## 🚀 Installation & Setup
 
-Nyx requires **zero external dependencies** outside of the standard Python library.
-
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/YourUsername/Nyx-Antivirus.git
-   cd Nyx-Antivirus
+   git clone https://github.com/saeed8elfiky/Nyx.git
+   cd Nyx
    ```
 
-2. **Ensure Python 3 is installed**
-   Verify you are running Python 3.x by typing `python --version` in your terminal.
+2. **Install Dependencies**
+   ```bash
+   pip install watchdog requests pefile
+   ```
 
 ---
 
 ## 🛠️ Usage
 
-By default, Nyx looks for `signatures.json` in the same directory and scans the current path.
-
-**Basic Directory Scan:** (Scans the current directory recursively)
-```bash
-python antivirus.py .
+### 🕵️‍♂️ Manual Scanning
+Scan a folder or file recursively for immediate threats:
+```powershell
+python antivirus.py "C:\Users\Saeed\Downloads" -q
 ```
 
-**Scan a Specific File:**
-```bash
-python antivirus.py /path/to/suspicious_file.exe
+### 🛡️ Guardian Mode (Real-Time Protection)
+Keep Nyx running in the background to monitor your system live:
+```powershell
+python antivirus.py "C:\Users\Saeed\Desktop" -w -q
 ```
 
-**Auto-Quarantine Threats:** (Moves detected threats into a `/quarantine` folder automatically)
-```bash
-python antivirus.py /var/www/html -q
-```
-
-**Use a Custom Signature Database:**
-```bash
-python antivirus.py . -d /path/to/custom_signatures.json
-```
+### ☁️ Cloud Intelligence
+To enable VirusTotal lookups, simply paste your API Key into the `VT_API_KEY` variable inside `antivirus.py`.
 
 ---
 
-## 📁 Database Structure (`signatures.json`)
+## 📁 Signature Database (`signatures.json`)
 
-Nyx uses a highly accessible JSON format for its signature database. It allows you to rapidly add new Threat Intel on the fly. 
+Nyx uses a highly accessible JSON format for its signature database.
 
 ```json
 {
     "hashes": {
         "44d88612fea8a8f36de82e1278abb02f": {
-            "name": "EICAR-Standard-Antivirus-Test-File",
+            "name": "EICAR-Test-File",
             "type": "test_virus"
         }
     },
@@ -81,11 +75,9 @@ Nyx uses a highly accessible JSON format for its signature database. It allows y
     ]
 }
 ```
-*   **Hashes:** Accepts MD5, SHA1, or SHA256 hashes as keys.
-*   **Heuristics:** Employs standard Python Regular Expressions in the `pattern` field.
 
 ---
 
 ## ⚠️ Disclaimer
 
-**Nyx is intended for educational purposes and internal tooling.** While highly effective at static analysis and heuristic matching, it does not employ real-time advanced memory scanning or ring-0 rootkit detection found in commercial enterprise EDR solutions. Use responsibly.
+**Nyx is intended for ethical security research and educational use.** While extremely powerful at static and heuristic detection, it should be used in conjunction with OS-level defenses for full system protection. Use with caution on production systems.
