@@ -1,11 +1,20 @@
-# Nyx Threat Scanner v1.1
-**Created by: Saeed Elfiky**
+<p align="center">
+  <img src="assets/logo.svg" width="250" alt="Nyx Logo">
+</p>
+
+<h1 align="center">Nyx Threat Scanner v1.1</h1>
+
+<p align="center">
+  <strong>Created by: Saeed Elfiky</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Security-Private--First-blue.svg" alt="Security">
+  <img src="https://img.shields.io/badge/Python-3.x-blue.svg" alt="Python Version">
+  <img src="https://img.shields.io/badge/Active-v1.1-brightgreen.svg" alt="Status">
+</p>
 
 Nyx is a high-performance, private-first Anti-Virus and Threat Intelligence Scanner built from scratch in Python. It provides multilayered security by combining static signature matching, dynamic heuristic analysis, and deep-level PE file inspection without ever needing an internet connection.
-
-![Nyx Scanner Demo](https://img.shields.io/badge/Security-Private--First-blue.svg)
-![Python Version](https://img.shields.io/badge/Python-3.x-blue.svg)
-![Status](https://img.shields.io/badge/Active-v1.1-brightgreen.svg)
 
 ---
 
