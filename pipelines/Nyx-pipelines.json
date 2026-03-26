@@ -1,0 +1,103 @@
+PUT _ingest/pipeline/Nyx-pipelines
+{
+  "processors": [
+    {
+      "grok": {
+        "field": "message",
+        "patterns": [
+          """\[%{TIMESTAMP_ISO8601:timestamp}\] THREAT: %{PATH:file_path} \| %{WORD:threat_name} \(%{GREEDYDATA:detection_method}\)"""
+        ],
+        "ignore_failure": true
+      }
+    },
+    {
+      "grok": {
+        "field": "message",
+        "patterns": [
+          """^\[%{TIMESTAMP_ISO8601:timestamp}\] QUARANTINED: %{DATA:file_path} moved to %{GREEDYDATA:quarantine_path}$"""
+        ],
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "event.action",
+        "value": "detected",
+        "override": false,
+        "ignore_empty_value": true,
+        "if": "ctx.containsKey('message') && ctx.message != null && ctx.message.contains('THREAT')",
+        "ignore_failure": true
+      }
+    },
+    {
+      "set": {
+        "field": "event.action",
+        "value": "file_quarantined",
+        "override": false,
+        "ignore_empty_value": true,
+        "if": "ctx.containsKey('message') && ctx.message != null && ctx.message.contains('QUARANTINED')",
+        "ignore_failure": true
+      }
+    },
+    {
+      "dissect": {
+        "field": "message",
+        "pattern": "[%{timestamp}] %{type}: %{rest_of_message}"
+      }
+    },
+    {
+      "rename": {
+        "field": "type",
+        "target_field": "event.type",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "rename": {
+        "field": "message",
+        "target_field": "event.original",
+        "ignore_missing": true
+      }
+    },
+    {
+      "rename": {
+        "field": "detection_method",
+        "target_field": "nyx.detection_method",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "rename": {
+        "field": "rest_of_message",
+        "target_field": "nyx.message"
+      }
+    },
+    {
+      "rename": {
+        "field": "threat_name",
+        "target_field": "threat.name",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "rename": {
+        "field": "file_path",
+        "target_field": "file.path",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    },
+    {
+      "rename": {
+        "field": "quarantine_path",
+        "target_field": "nyx.quarantine_path",
+        "ignore_missing": true,
+        "ignore_failure": true
+      }
+    }
+  ]
+}

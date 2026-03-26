@@ -40,7 +40,11 @@ Nyx is a high-performance, private-first Anti-Virus and Threat Intelligence Scan
    ```bash
    pip install watchdog pefile
    ```
-
+3. **Install Pipelines**
+   - Copy the content in pipeline.json file and paste it in Kibana Dev Tools.
+   <p align="center">
+  <img src="assets/pipelines.png" alt="pipeline">
+</p>
 ---
 
 ## Usage
@@ -75,7 +79,7 @@ Nyx uses a highly accessible JSON format for its signature database.
         {
             "name": "Suspicious_PHP_Eval",
             "pattern": "eval\\s*\\(\\s*base64_decode\\s*\\(",
-            "type": "webshell",
+           "type": "webshell",
             "severity": "high"
         }
     ]
