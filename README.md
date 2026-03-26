@@ -1,4 +1,5 @@
 # 🌑 Nyx Threat Scanner
+**Created by: Saeed Elfiky**
 
 Nyx is a lightweight, command-line Anti-Virus and Threat Scanner built entirely from scratch in Python. It is designed to quickly identify malicious files, web shells, and scripts via both precise hash-matching and dynamic heuristic analysis.
 

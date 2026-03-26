@@ -1,0 +1,6 @@
+quarantine/
+*.quarantined
+__pycache__/
+.vscode/
+.idea/
+*.log

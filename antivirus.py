@@ -8,6 +8,14 @@ import time
 from datetime import datetime
 
 # ==========================================
+# METADATA & RIGHTS
+# ==========================================
+# Author: Saeed Elfiky
+# License: MIT
+# Copyright (c) 2026 Saeed Elfiky
+# ==========================================
+
+# ==========================================
 # TERMINAL THEME / COLORS
 # ==========================================
 class Colors:
@@ -27,6 +35,7 @@ BANNER = f"""
  |_|\\__| |_|   /_/\\_\\
                        
         [ NYX THREAT SCANNER - V1.0 ]
+        [ Created by: Saeed Elfiky  ]
 {Colors.END}
 """
 
