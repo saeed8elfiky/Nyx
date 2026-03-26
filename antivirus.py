@@ -5,7 +5,6 @@ import re
 import argparse
 import shutil
 import time
-import requests
 import pefile
 from datetime import datetime
 from watchdog.observers import Observer
@@ -224,7 +223,7 @@ if __name__ == "__main__":
     scanner = NyxEngine()
     
     if args.watch:
-        print(f"{Colors.GREEN}{Colors.BOLD}[🛡️] Nyx Guardian (Active Protection) Started! Monitoring: {args.target}{Colors.END}")
+        print(f"{Colors.GREEN}{Colors.BOLD}[*] Nyx Guardian (Active Protection) Started! Monitoring: {args.target}{Colors.END}")
         event_handler = NyxGuardian(scanner, args.quarantine)
         observer = Observer()
         observer.schedule(event_handler, args.target, recursive=True)

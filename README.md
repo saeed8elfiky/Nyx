@@ -1,25 +1,25 @@
-# 🌑 Nyx Threat Scanner v1.1
+# Nyx Threat Scanner v1.1
 **Created by: Saeed Elfiky**
 
-Nyx is a high-performance, advanced Anti-Virus and Threat Intelligence Scanner built from scratch in Python. It provides multilayered security by combining static signature matching, dynamic heuristic analysis, and deep-level PE file inspection.
+Nyx is a high-performance, private-first Anti-Virus and Threat Intelligence Scanner built from scratch in Python. It provides multilayered security by combining static signature matching, dynamic heuristic analysis, and deep-level PE file inspection without ever needing an internet connection.
 
-![Nyx Scanner Demo](https://img.shields.io/badge/Security-Advanced-blue.svg)
+![Nyx Scanner Demo](https://img.shields.io/badge/Security-Private--First-blue.svg)
 ![Python Version](https://img.shields.io/badge/Python-3.x-blue.svg)
 ![Status](https://img.shields.io/badge/Active-v1.1-brightgreen.svg)
 
 ---
 
-## ⚡ Advanced Features
+## Features
 
-*   **🛡️ Nyx Guardian (Real-Time Protection):** Actively monitors your directories (Desktop, Downloads, etc.) in real-time using built-in file system watchers. It catches and quarantines threats as soon as they land on your drive.
-*   **🔍 Deep PE Inspection:** Analyzes Windows `.exe` and `.dll` structure for entropy (detecting packed/compressed malware) and suspicious DLL import hashing.
-*   **🌐 VirusTotal Cloud Integration:** Automatically syncs with the VirusTotal API to verify unknown samples against over 70+ global antivirus engines in the cloud.
-*   **📋 Persistent Event Logging:** Tracks all scan history, threat findings, and quarantine actions in a secure, local `nyx_scan_history.log` file.
-*   **📦 Automated Quarantine:** Safely isolates and segregates malicious files by timestamping and renaming them to prevent accidental execution.
+*   **Nyx Guardian (Real-Time Protection):** Actively monitors your directories (Desktop, Downloads, etc.) in real-time using built-in file system watchers. It catches and quarantines threats as soon as they land on your drive.
+*   **Deep PE Inspection:** Analyzes Windows .exe and .dll structure for entropy (detecting packed/compressed malware) and suspicious DLL import hashing.
+*   **Air-Gapped Scanning:** 100% private. All scanning occurs locally on your machine with zero external API calls or cloud dependencies.
+*   **Persistent Event Logging:** Tracks all scan history, threat findings, and quarantine actions in a secure, local nyx_scan_history.log file.
+*   **Automated Quarantine:** Safely isolates and segregates malicious files by timestamping and renaming them to prevent accidental execution.
 
 ---
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 1. **Clone the Repository**
    ```bash
@@ -29,31 +29,28 @@ Nyx is a high-performance, advanced Anti-Virus and Threat Intelligence Scanner b
 
 2. **Install Dependencies**
    ```bash
-   pip install watchdog requests pefile
+   pip install watchdog pefile
    ```
 
 ---
 
-## 🛠️ Usage
+## Usage
 
-### 🕵️‍♂️ Manual Scanning
+### Manual Scanning
 Scan a folder or file recursively for immediate threats:
 ```powershell
 python antivirus.py "C:\Users\Saeed\Downloads" -q
 ```
 
-### 🛡️ Guardian Mode (Real-Time Protection)
+### Guardian Mode (Real-Time Protection)
 Keep Nyx running in the background to monitor your system live:
 ```powershell
 python antivirus.py "C:\Users\Saeed\Desktop" -w -q
 ```
 
-### ☁️ Cloud Intelligence
-To enable VirusTotal lookups, simply paste your API Key into the `VT_API_KEY` variable inside `antivirus.py`.
-
 ---
 
-## 📁 Signature Database (`signatures.json`)
+## Database Structure (signatures.json)
 
 Nyx uses a highly accessible JSON format for its signature database.
 
@@ -78,6 +75,6 @@ Nyx uses a highly accessible JSON format for its signature database.
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 **Nyx is intended for ethical security research and educational use.** While extremely powerful at static and heuristic detection, it should be used in conjunction with OS-level defenses for full system protection. Use with caution on production systems.
