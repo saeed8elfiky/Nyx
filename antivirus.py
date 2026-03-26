@@ -22,7 +22,6 @@ from watchdog.events import FileSystemEventHandler
 # ==========================================
 # CONFIGURATION
 # ==========================================
-VT_API_KEY = ""  # Add your VirusTotal API key here to enable cloud scanning
 LOG_FILE = "nyx_scan_history.log"
 
 class Colors:
@@ -107,35 +106,20 @@ class NyxEngine:
             pe = pefile.PE(file_path)
             # High Entropy check (packed/encrypted)
             entropy = sum(s.get_entropy() for s in pe.sections) / len(pe.sections)
-            if entropy > 7.0:
+            if entropy > 7.1:
                 return {"name": "Possible_Packed_Malware", "type": "packer", "method": f"Deep PE (Entropy: {entropy:.2f})"}
             
             # Suspicious Import Check
             suspicious_dlls = ["ws2_32.dll", "wininet.dll", "advapi32.dll"]
-            found_dlls = []
+            found_dll_count = 0
             if hasattr(pe, 'DIRECTORY_ENTRY_IMPORT'):
                 for entry in pe.DIRECTORY_ENTRY_IMPORT:
                     dll_name = entry.dll.decode().lower()
                     if dll_name in suspicious_dlls:
-                        found_dlls.append(dll_name)
+                        found_dll_count += 1
             
-            if len(found_dlls) >= 2:
-                return {"name": "Suspicious_Imports", "type": "dropper", "method": f"PE Import Analysis ({', '.join(found_dlls)})"}
-        except: pass
-        return None
-
-    def virustotal_lookup(self, sha256):
-        """Cloud intelligence check via VirusTotal."""
-        if not VT_API_KEY: return None
-        url = f"https://www.virustotal.com/api/v3/files/{sha256}"
-        headers = {"x-apikey": VT_API_KEY}
-        try:
-            response = requests.get(url, headers=headers, timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                stats = data['data']['attributes']['last_analysis_stats']
-                if stats['malicious'] > 0:
-                    return {"name": f"VT_Flagged_{stats['malicious']}_Engines", "type": "cloud_intel", "method": "VirusTotal API"}
+            if found_dll_count >= 2:
+                return {"name": "Suspicious_Imports", "type": "dropper", "method": f"PE Import Analysis"}
         except: pass
         return None
 
@@ -155,17 +139,12 @@ class NyxEngine:
                 threat_info["method"] = f"Local Hash ({algo.upper()})"
                 break
 
-        # 2. VirusTotal Cloud Check
-        if not threat_found:
-            vt_result = self.virustotal_lookup(hashes["sha256"])
-            if vt_result: threat_found, threat_info = True, vt_result
-
-        # 3. Deep PE Analysis (for .exe/.dll)
+        # 2. Deep PE Analysis (for .exe/.dll)
         if not threat_found and file_path.lower().endswith(('.exe', '.dll')):
             pe_result = self.pe_deep_inspect(file_path)
             if pe_result: threat_found, threat_info = True, pe_result
 
-        # 4. Local Heuristic Content Scan
+        # 3. Local Heuristic Content Scan
         if not threat_found:
             try:
                 if os.path.getsize(file_path) < 10*1024*1024:
