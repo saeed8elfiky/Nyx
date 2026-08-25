@@ -7,6 +7,10 @@
         "0D9B99B0B51CA18E9449DAD5D6A71AAAA9507912ADCB1DC300AAF06ED424FC24": {
             "name": "trytodefend",
             "type": "trojan"
+        },
+        "": {
+            "name": "",
+            "type": "virus"
         }
     },
     "heuristics": [
@@ -26,6 +30,24 @@
             "name": "Suspicious_VBS_Run",
             "pattern": "CreateObject\\s*\\(\\s*[\"']WScript\\.Shell[\"']\\s*\\)\\.Run",
             "type": "dropper",
+            "severity": "medium"
+        }
+        {
+            "name": "Suspicious_Process_Injection",
+            "pattern": "VirtualAllocEx|WriteProcessMemory|CreateRemoteThread",
+            "type": "injection",
+            "severity": "high"
+        },
+        {
+            "name": "Credential_Access_Mimikatz",
+            "pattern": "sekurlsa::logonpasswords|lsass.exe|privilege::debug",
+            "type": "credential_theft",
+            "severity": "critical"
+        },
+        {
+            "name": "Persistence_Registry_Run",
+            "pattern": "CurrentVersion\\\\Run\\\\|CurrentVersion\\\\RunOnce\\\\",
+            "type": "persistence",
             "severity": "medium"
         }
     ]
